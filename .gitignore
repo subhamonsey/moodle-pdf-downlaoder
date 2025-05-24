@@ -6,4 +6,3 @@ pdfs/
 build/
 dist
 download_moodle_pdfs.spec
-MoodlePDFDownloader.exe
