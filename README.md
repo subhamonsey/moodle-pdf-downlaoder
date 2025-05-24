@@ -2,12 +2,17 @@
 
 This is a Python script that logs into a Moodle course page and downloads all available PDF files. If your college uses moodle as their coursepage and you often find yourself wanting to download all the pdfs from a course but hate doing it manually. Try this out. 
 
-Here is a step by step guide:
+## Here is a step by step guide:
 
-1. You must have python installed.
-2. Clone the repo or just download the .py file.
-3. In your terminal run "python download_moodle_pdfs.py --login-url [login URL] --course-url [course URL]"
-4. ........
+### Windows
+1. Download the .exe and .bat file only.
+2. Double click the .bat file
+3. Provide the link to the login screen and the course.
+### Linux 
+- Run "./download_moodle_pdfs --login-url [LOGIN-URL] --course-url [COURSE-URL]"
+
+### Python developers
+- Run "python download_moodle_pdfs.py --login-url [LOGIN-URL] --course-url [COURSE-URL]"
 
 ## 🚀 Features
 
