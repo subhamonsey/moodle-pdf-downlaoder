@@ -66,15 +66,15 @@ def get_pdf_links(session, course_url):
 
     return pdf_files
 
-def download_pdfs(session, pdf_links, folder='pdfs'):
+def download_pdfs(session, pdf_files, folder='pdfs'):
     os.makedirs(folder, exist_ok=True)
-    for url in pdf_links:
-        filename = os.path.join(folder, url.split('/')[-1])
-        print(f"Downloading {url} -> {filename}")
+    for url, filename in pdf_files:
+        path = os.path.join(folder, filename)
+        print(f"📥 Downloading {url} -> {path}")
         response = session.get(url)
-        with open(filename, 'wb') as f:
+        with open(path, 'wb') as f:
             f.write(response.content)
-    print(f"✅ Downloaded {len(pdf_links)} PDFs to '{folder}'")
+    print(f"✅ Downloaded {len(pdf_files)} PDFs to '{folder}'")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -97,13 +97,14 @@ def main():
             login_to_moodle(session, args.login_url, username, password)
             print("✅ Logged in successfully.")
 
-            pdf_links = get_pdf_links(session, args.course_url)
-            if not pdf_links:
+            pdf_files = get_pdf_links(session, args.course_url)
+            if not pdf_files:
                 print("⚠️ No PDF files found on the course page.")
                 return
 
-            print(f"Found {len(pdf_links)} PDF files.")
-            download_pdfs(session, pdf_links)
+            print(f"Found {len(pdf_files)} PDF files.")
+            download_pdfs(session, pdf_files)
+        
         except Exception as e:
             print(f"❌ Error: {e}")
 
