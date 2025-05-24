@@ -5,13 +5,13 @@ This is a Python script that logs into a Moodle course page and downloads all av
 ## Here is a step by step guide:
 
 ### Windows
-1. Download the .exe and .bat file only.
-2. Double click the .bat file
+1. Download the `.exe` and `.bat` file only.
+2. Double click the `.bat` file
 3. Provide the link to the login screen and the course.
 ### Linux 
-- Run "./download_moodle_pdfs --login-url [LOGIN-URL] --course-url [COURSE-URL]"
+- Run `./download_moodle_pdfs --login-url [LOGIN-URL] --course-url [COURSE-URL]`
 
 ### If you don't trust me
 - Install python
-- Install dependencies "pip install -r requirements.txt"
-- Run "python download_moodle_pdfs.py --login-url [LOGIN-URL] --course-url [COURSE-URL]"
+- Install dependencies `pip install -r requirements.txt`
+- Run `python download_moodle_pdfs.py --login-url [LOGIN-URL] --course-url [COURSE-URL]`
