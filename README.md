@@ -5,7 +5,9 @@ This is a Python script that logs into a Moodle course page and downloads all av
 Here is a step by step guide:
 
 1. You must have python installed.
-2. ......
+2. Clone the repo or just download the .py file.
+3. In your terminal run "python download_moodle_pdfs.py --login-url [login URL] --course-url [course URL]"
+4. ........
 
 ## 🚀 Features
 
