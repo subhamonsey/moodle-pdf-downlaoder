@@ -11,7 +11,7 @@ This is a Python script that logs into a Moodle course page and downloads all av
 ### Linux 
 - Run "./download_moodle_pdfs --login-url [LOGIN-URL] --course-url [COURSE-URL]"
 
-### IF YOU DON'T TRUST ME ( I mean don't go about running random .exe files from the internet duh)
+### If you don't trust me
 - Install python
 - Install dependencies "pip install -r requirements.txt"
 - Run "python download_moodle_pdfs.py --login-url [LOGIN-URL] --course-url [COURSE-URL]"
