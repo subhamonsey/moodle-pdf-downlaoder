@@ -4,6 +4,7 @@ import os
 from urllib.parse import urljoin
 import getpass
 import argparse
+import re
 
 def login_to_moodle(session, login_url, username, password):
     # Get the login page to find the login token
@@ -32,14 +33,38 @@ def get_pdf_links(session, course_url):
     response = session.get(course_url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Find all links that end with .pdf
-    pdf_links = []
+    pdf_files = []
+
     for link in soup.find_all('a', href=True):
         href = link['href']
-        if '.pdf' in href.lower():
-            full_url = urljoin(course_url, href)
-            pdf_links.append(full_url)
-    return pdf_links
+        full_url = urljoin(course_url, href)
+
+        if "mod/resource" in full_url:
+            try:
+                head = session.head(full_url, allow_redirects=True)
+                content_type = head.headers.get('Content-Type', '')
+
+                if 'application/pdf' in content_type:
+                    # Try to get filename from Content-Disposition header
+                    cd = head.headers.get('Content-Disposition', '')
+                    filename_match = re.search(r'filename[^;=\n]*=["\']?([^"\';\n]*)', cd)
+                    if filename_match:
+                        filename = filename_match.group(1)
+                    else:
+                        # Fallback: extract ID and use that as filename
+                        file_id = full_url.split('=')[-1]
+                        filename = f"resource_{file_id}.pdf"
+
+                    # Ensure .pdf extension
+                    if not filename.lower().endswith('.pdf'):
+                        filename += '.pdf'
+
+                    pdf_files.append((full_url, filename))
+
+            except Exception as e:
+                print(f"⚠️ Skipping {full_url} due to error: {e}")
+
+    return pdf_files
 
 def download_pdfs(session, pdf_links, folder='pdfs'):
     os.makedirs(folder, exist_ok=True)
