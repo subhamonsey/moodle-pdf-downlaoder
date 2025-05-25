@@ -8,7 +8,7 @@ import re
 
 def login_to_moodle(session, login_url, username, password):
     # Get the login page to find the login token
-    response = session.get(login_url)
+    response = session.get(login_url, timeout=20)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Find logintoken if it exists
@@ -39,7 +39,7 @@ def clean_url(url):
 
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', cleaned_query, ''))
 
-def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2):
+def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2, base_folder='pdfs'):
     if visited is None:
         visited = set()
     course_url = clean_url(course_url)
@@ -48,9 +48,17 @@ def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2):
     print(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
     visited.add(course_url)
     
-    response = session.get(course_url)
+    response = session.get(course_url, timeout=20)
     soup = BeautifulSoup(response.text, 'html.parser')
-
+    
+    parsed = urlparse(course_url)
+    path_part = parsed.path
+    query_part = parsed.query.replace('=', '_').replace('&', '_')[:40]
+    safe_folder_name = f"{path_part}_{query_part}" if query_part else path_part
+    title = soup.title.string.strip() if soup.title else safe_folder_name
+    target_folder_name = re.sub(r'[^\w\-_.]', '_', title)
+    target_folder = os.path.join(base_folder, target_folder_name) if depth != 0 else base_folder
+    
     pdf_files = []
 
     for link in soup.find_all('a', href=True):
@@ -70,30 +78,38 @@ def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2):
                         filename = filename_match.group(1)
                     else:
                         # Fallback: extract ID and use that as filename
-                        file_id = full_url.split('=')[-1]
-                        # filename = f"resource_{file_id}.pdf"
-
-                    # # Ensure .pdf extension
-                    # if not filename.lower().endswith('.pdf'):
-                    #     filename += '.pdf'
-                    pdf_files.append((full_url, filename))
+                        filename = full_url.split('=')[-1]
+                    
+                    pdf_files.append((full_url, filename, target_folder))
                 elif 'text/html' in content_type and 'moodle' in full_url:    
-                    pdf_files.extend(get_pdf_links(session, full_url, visited, depth + 1, max_depth))
+                    pdf_files.extend(get_pdf_links(session, full_url, visited, depth + 1, max_depth, base_folder))
             except Exception as e:
                 print(f"⚠️ Skipping {full_url} due to error: {e}")
 
     return pdf_files
 
-def download_pdfs(session, pdf_files, folder='pdfs'):
-    os.makedirs(folder, exist_ok=True)
-    for url, filename in pdf_files:
+# def download_pdfs(session, pdf_files, folder='pdfs'):
+#     os.makedirs(folder, exist_ok=True)
+#     for url, filename in pdf_files:
+#         path = os.path.join(folder, filename)
+#         print(f"📥 Downloading {url} -> {path}")
+#         response = session.get(url)
+#         with open(path, 'wb') as f:
+#             f.write(response.content)
+#     print(f"✅ Downloaded {len(pdf_files)} PDFs to '{folder}'")
+def download_pdfs(session, pdf_files):
+    for url, filename, folder in pdf_files:
+        os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, filename)
         print(f"📥 Downloading {url} -> {path}")
-        response = session.get(url)
-        with open(path, 'wb') as f:
-            f.write(response.content)
-    print(f"✅ Downloaded {len(pdf_files)} PDFs to '{folder}'")
-
+        try:
+            response = session.get(url)
+            with open(path, 'wb') as f:
+                f.write(response.content)
+        except Exception as e:
+            print(f"❌ Failed to download {url}: {e}")
+    print(f"✅ Downloaded {len(pdf_files)} PDFs.")
+    
 def main():
     parser = argparse.ArgumentParser(
         description="Download all PDFs from a Moodle course page after logging in."
@@ -115,7 +131,12 @@ def main():
             login_to_moodle(session, args.login_url, username, password)
             print("✅ Logged in successfully.")
 
-            pdf_files = get_pdf_links(session, args.course_url)
+            course_page_response = session.get(args.course_url, timeout=20)
+            course_page_soup = BeautifulSoup(course_page_response.text, 'html.parser')
+            title = course_page_soup.title.string.strip() if course_page_soup.title else "course"
+            safe_title = re.sub(r'[^\w\-_.]', '_', title)
+            course_folder = os.path.join(os.getcwd(), safe_title)
+            pdf_files = get_pdf_links(session, args.course_url, base_folder=course_folder)
             if not pdf_files:
                 print("⚠️ No PDF files found on the course page.")
                 return
