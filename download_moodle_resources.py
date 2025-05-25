@@ -53,6 +53,7 @@ def should_skip_url(url):
     return any(k in url for k in skip_keywords)
 
 def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, base_folder='resources'):
+    page_type = 0
     if visited is None:
         visited = set()
     course_url = clean_url(course_url)
@@ -79,7 +80,7 @@ def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, 
         href = link['href']
         full_url = urljoin(course_url, href)
 
-        if "mod" in full_url:
+        if any(keyword in full_url for keyword in ['mod', 'pdf']):
             try:
                 head = session.head(full_url, allow_redirects=True)
                 content_type = head.headers.get('Content-Type', '')
@@ -91,8 +92,9 @@ def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, 
                     if filename_match:
                         filename = filename_match.group(1)
                     else:
-                        # Fallback: extract ID and use that as filename
-                        filename = full_url.split('=')[-1]
+                        # Fallback: extract filename from url path
+                        path=urlparse(full_url).path
+                        filename = re.search(r'[^/]+$', path).group()
                     
                     resource_files.append((full_url, filename, target_folder))
                 elif 'text/html' in content_type and 'moodle' in full_url:
@@ -116,8 +118,8 @@ def download_resources(session, resource_files):
             with open(path, 'wb') as f:
                 f.write(response.content)
         except Exception as e:
-            print(f"❌ Failed to download {url}: {e}")
             logging.error(f"❌ Failed to download {url}: {e}",exc_info=True)
+            print(f"❌ Failed to download {url}: {e}")
     print(f"✅ Downloaded {len(resource_files)} resources.")
     logging.info(f"✅ Downloaded {len(resource_files)} resources.")
     
