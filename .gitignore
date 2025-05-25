@@ -1,11 +1,6 @@
+**/
 .venv/
 __pycache__/
 *.pyc
 *.log
-pdfs/
-build/
-dist
-download_moodle_pdfs.spec
-Course__Econometrics___CMI
-*CMI*
-*cmi*
+*.spec
