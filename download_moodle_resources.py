@@ -47,11 +47,16 @@ def clean_url(url):
 
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', cleaned_query, ''))
 
+def should_skip_url(url):
+    """Skip URLs that point to non-content modules."""
+    skip_keywords = ['forum', 'comment']
+    return any(k in url for k in skip_keywords)
+
 def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, base_folder='resources'):
     if visited is None:
         visited = set()
     course_url = clean_url(course_url)
-    if course_url in visited or depth > max_depth:
+    if course_url in visited or depth > max_depth or should_skip_url(course_url):
         return []
     print(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
     logging.info(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
@@ -92,7 +97,7 @@ def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, 
                     resource_files.append((full_url, filename, target_folder))
                 elif 'text/html' in content_type and 'moodle' in full_url:
                     clean_full_url = clean_url(full_url)
-                    if clean_full_url not in visited:
+                    if (clean_full_url not in visited) and not should_skip_url(clean_full_url):
                         resource_files.extend(get_resource_links(session, clean_full_url, visited, depth + 1, max_depth, base_folder))
             except Exception as e:
                 print(f"⚠️ Skipping {full_url} due to error: {e}")
