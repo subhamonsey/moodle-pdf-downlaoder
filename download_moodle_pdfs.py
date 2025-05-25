@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-from urllib.parse import urljoin
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import getpass
 import argparse
 import re
@@ -29,7 +29,14 @@ def login_to_moodle(session, login_url, username, password):
         raise Exception("Login failed. Please check your credentials.")
     return session
 
-def get_pdf_links(session, course_url):
+def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2):
+    if visited is None:
+        visited = set()
+    if course_url in visited or depth > max_depth:
+        return []
+    print(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
+    visited.add(course_url)
+    
     response = session.get(course_url)
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -39,12 +46,12 @@ def get_pdf_links(session, course_url):
         href = link['href']
         full_url = urljoin(course_url, href)
 
-        if "mod/resource" in full_url:
+        if "mod" in full_url:
             try:
                 head = session.head(full_url, allow_redirects=True)
                 content_type = head.headers.get('Content-Type', '')
 
-                if 'application/pdf' in content_type:
+                if 'application' in content_type:
                     # Try to get filename from Content-Disposition header
                     cd = head.headers.get('Content-Disposition', '')
                     filename_match = re.search(r'filename[^;=\n]*=["\']?([^"\';\n]*)', cd)
@@ -53,14 +60,14 @@ def get_pdf_links(session, course_url):
                     else:
                         # Fallback: extract ID and use that as filename
                         file_id = full_url.split('=')[-1]
-                        filename = f"resource_{file_id}.pdf"
+                        # filename = f"resource_{file_id}.pdf"
 
-                    # Ensure .pdf extension
-                    if not filename.lower().endswith('.pdf'):
-                        filename += '.pdf'
-
+                    # # Ensure .pdf extension
+                    # if not filename.lower().endswith('.pdf'):
+                    #     filename += '.pdf'
                     pdf_files.append((full_url, filename))
-
+                elif 'text/html' in content_type and 'moodle' in full_url:    
+                    pdf_files.extend(get_pdf_links(session, full_url, visited, depth + 1, max_depth))
             except Exception as e:
                 print(f"⚠️ Skipping {full_url} due to error: {e}")
 
