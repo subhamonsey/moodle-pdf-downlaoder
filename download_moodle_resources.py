@@ -39,7 +39,7 @@ def clean_url(url):
 
     return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', cleaned_query, ''))
 
-def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2, base_folder='pdfs'):
+def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, base_folder='resources'):
     if visited is None:
         visited = set()
     course_url = clean_url(course_url)
@@ -59,7 +59,7 @@ def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2, base_
     target_folder_name = re.sub(r'[^\w\-_.]', '_', title)
     target_folder = os.path.join(base_folder, target_folder_name) if depth != 0 else base_folder
     
-    pdf_files = []
+    resource_files = []
 
     for link in soup.find_all('a', href=True):
         href = link['href']
@@ -80,25 +80,16 @@ def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2, base_
                         # Fallback: extract ID and use that as filename
                         filename = full_url.split('=')[-1]
                     
-                    pdf_files.append((full_url, filename, target_folder))
+                    resource_files.append((full_url, filename, target_folder))
                 elif 'text/html' in content_type and 'moodle' in full_url:    
-                    pdf_files.extend(get_pdf_links(session, full_url, visited, depth + 1, max_depth, base_folder))
+                    resource_files.extend(get_resource_links(session, full_url, visited, depth + 1, max_depth, base_folder))
             except Exception as e:
                 print(f"⚠️ Skipping {full_url} due to error: {e}")
 
-    return pdf_files
+    return resource_files
 
-# def download_pdfs(session, pdf_files, folder='pdfs'):
-#     os.makedirs(folder, exist_ok=True)
-#     for url, filename in pdf_files:
-#         path = os.path.join(folder, filename)
-#         print(f"📥 Downloading {url} -> {path}")
-#         response = session.get(url)
-#         with open(path, 'wb') as f:
-#             f.write(response.content)
-#     print(f"✅ Downloaded {len(pdf_files)} PDFs to '{folder}'")
-def download_pdfs(session, pdf_files):
-    for url, filename, folder in pdf_files:
+def download_resources(session, resource_files):
+    for url, filename, folder in resource_files:
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, filename)
         print(f"📥 Downloading {url} -> {path}")
@@ -108,11 +99,11 @@ def download_pdfs(session, pdf_files):
                 f.write(response.content)
         except Exception as e:
             print(f"❌ Failed to download {url}: {e}")
-    print(f"✅ Downloaded {len(pdf_files)} PDFs.")
+    print(f"✅ Downloaded {len(resource_files)} resources.")
     
 def main():
     parser = argparse.ArgumentParser(
-        description="Download all PDFs from a Moodle course page after logging in."
+        description="Download all resources from a Moodle course page after logging in."
     )
     parser.add_argument(
         '--login-url', required=True, help='The Moodle login URL (e.g., https://moodle.example.com/login/index.php)'
@@ -136,13 +127,13 @@ def main():
             title = course_page_soup.title.string.strip() if course_page_soup.title else "course"
             safe_title = re.sub(r'[^\w\-_.]', '_', title)
             course_folder = os.path.join(os.getcwd(), safe_title)
-            pdf_files = get_pdf_links(session, args.course_url, base_folder=course_folder)
-            if not pdf_files:
-                print("⚠️ No PDF files found on the course page.")
+            resource_files = get_resource_links(session, args.course_url, base_folder=course_folder)
+            if not resource_files:
+                print("⚠️ No resource files found on the course page.")
                 return
 
-            print(f"Found {len(pdf_files)} PDF files.")
-            download_pdfs(session, pdf_files)
+            print(f"Found {len(resource_files)} resource files.")
+            download_resources(session, resource_files)
         
         except Exception as e:
             print(f"❌ Error: {e}")
