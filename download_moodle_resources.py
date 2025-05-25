@@ -5,6 +5,14 @@ from urllib.parse import urljoin, urlunparse, parse_qs, urlencode, urlparse
 import getpass
 import argparse
 import re
+import logging
+
+logging.basicConfig(
+    filename='moodle_downloader.log',
+    filemode='a',  # append to existing logs
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    level=logging.INFO  # or DEBUG for more verbosity
+)
 
 def login_to_moodle(session, login_url, username, password):
     # Get the login page to find the login token
@@ -46,6 +54,7 @@ def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, 
     if course_url in visited or depth > max_depth:
         return []
     print(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
+    logging.info(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
     visited.add(course_url)
     
     response = session.get(course_url, timeout=20)
@@ -81,10 +90,13 @@ def get_resource_links(session, course_url, visited=None, depth=0, max_depth=2, 
                         filename = full_url.split('=')[-1]
                     
                     resource_files.append((full_url, filename, target_folder))
-                elif 'text/html' in content_type and 'moodle' in full_url:    
-                    resource_files.extend(get_resource_links(session, full_url, visited, depth + 1, max_depth, base_folder))
+                elif 'text/html' in content_type and 'moodle' in full_url:
+                    clean_full_url = clean_url(full_url)
+                    if clean_full_url not in visited:
+                        resource_files.extend(get_resource_links(session, clean_full_url, visited, depth + 1, max_depth, base_folder))
             except Exception as e:
                 print(f"⚠️ Skipping {full_url} due to error: {e}")
+                logging.warning(f"⚠️ Skipping {full_url} due to error: {e}", exc_info=True)
 
     return resource_files
 
@@ -93,13 +105,16 @@ def download_resources(session, resource_files):
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, filename)
         print(f"📥 Downloading {url} -> {path}")
+        logging.info((f"📥 Downloading {url} -> {path}"))
         try:
             response = session.get(url)
             with open(path, 'wb') as f:
                 f.write(response.content)
         except Exception as e:
             print(f"❌ Failed to download {url}: {e}")
+            logging.error(f"❌ Failed to download {url}: {e}",exc_info=True)
     print(f"✅ Downloaded {len(resource_files)} resources.")
+    logging.info(f"✅ Downloaded {len(resource_files)} resources.")
     
 def main():
     parser = argparse.ArgumentParser(
@@ -121,6 +136,7 @@ def main():
         try:
             login_to_moodle(session, args.login_url, username, password)
             print("✅ Logged in successfully.")
+            logging.info("✅ Logged in successfully.")
 
             course_page_response = session.get(args.course_url, timeout=20)
             course_page_soup = BeautifulSoup(course_page_response.text, 'html.parser')
@@ -130,13 +146,20 @@ def main():
             resource_files = get_resource_links(session, args.course_url, base_folder=course_folder)
             if not resource_files:
                 print("⚠️ No resource files found on the course page.")
+                logging.warning("⚠️ No resource files found on the course page.")
                 return
 
             print(f"Found {len(resource_files)} resource files.")
+            logging.info(f"Found {len(resource_files)} resource files.")
             download_resources(session, resource_files)
         
         except Exception as e:
             print(f"❌ Error: {e}")
+            logging.error(f"❌ Error: {e}",exc_info=True)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"❌ An unexpected error occurred. See 'moodle_downloader.log' for details.")
+        logging.exception("❌ Unhandled exception occurred:")
