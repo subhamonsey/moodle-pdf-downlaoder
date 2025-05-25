@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+from urllib.parse import urljoin, urlunparse, parse_qs, urlencode, urlparse
 import getpass
 import argparse
 import re
@@ -29,9 +29,20 @@ def login_to_moodle(session, login_url, username, password):
         raise Exception("Login failed. Please check your credentials.")
     return session
 
+def clean_url(url):
+    """Remove fragment and unnecessary query parameters."""
+    parsed = urlparse(url)
+    allowed_params = ['id']
+    query = parse_qs(parsed.query)
+    filtered_query = {k: v for k, v in query.items() if k in allowed_params}
+    cleaned_query = urlencode(filtered_query, doseq=True)
+
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', cleaned_query, ''))
+
 def get_pdf_links(session, course_url, visited=None, depth=0, max_depth=2):
     if visited is None:
         visited = set()
+    course_url = clean_url(course_url)
     if course_url in visited or depth > max_depth:
         return []
     print(f"{'📂 ' + '  ' * depth}Crawling: {course_url}")
