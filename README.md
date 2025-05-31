@@ -1,6 +1,6 @@
 # Moodle PDF Downloader 🚀
 
-This is a Python script that logs into Moodle and navigates course page links recursively to downloads all available course resources files. If your college uses moodle as their course page and you often find yourself wanting to download all the pdfs from a course but hate doing it manually. Try this out.
+This is a Python script that logs into Moodle and navigates course page links recursively to download all available course resources files. If your college uses moodle as their course page and you often find yourself wanting to download all the pdfs from a course but hate doing it manually. Try this out.
 
 ## Here is a step by step guide: 📃
 
