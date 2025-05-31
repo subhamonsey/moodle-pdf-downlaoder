@@ -1,4 +1,4 @@
-# Moodle resource Downloader 🚀
+# Moodle Resource Downloader 🚀
 
 This is a Python script that logs into Moodle and navigates course page links recursively to download all available course resources files. If your college uses moodle as their course page and you often find yourself wanting to download all the resources like pdf,xlsx,csv, etc. from a course but hate doing it manually. Try this out.
 
